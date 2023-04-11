@@ -30,10 +30,10 @@
 
 const int miso_packet_length = 26;
 const uint8_t miso_packet[] = {
-    0x01, 
-    0x02, 
-    0x03, 
-    0x04, 
+    0xFF, 
+    0xFD, 
+    0xFF, 
+    0xFF, 
     0xC9, 
     0xFF, 
     0xBF, 
@@ -57,13 +57,22 @@ const uint8_t miso_packet[] = {
     0xFF, 
     0x1A
 };
-// const uint8_t miso_packet[] = {0xFF, 0xFD, 0xFF, 0xFF, 0xC9, 0xFF, 0xBF, 0xF7, 0x70, 0x06, 0x7F, 0xBF, 0x4C, 0x00, 0xA8, 0x88, 0x88, 0x88, 0x88, 0x88, 0x88, 0x88, 0x88, 0x1B, 0xFF, 0x1A};
-// const byte miso_packet[] = {0xAA, 0x55};
 
 volatile unsigned long risetime = 0;
 volatile int bytecount = 0;
 volatile int bitcount = 0;
 volatile int state = STATE_IDLE;
+
+static char event_str[128];
+
+// Callbacks for edge changes on CLK
+void clock_edge_callback(uint gpio, uint32_t events) {
+    if (events & GPIO_IRQ_EDGE_RISE) {
+        printf("Clock rise...");
+    } else if (events & GPIO_IRQ_EDGE_FALL) {
+        printf("Clock fall\n");
+    }
+}
 
 // Configure DMA to feed data to the PIO state machine for
 // shifting into the body
@@ -120,6 +129,9 @@ int main() {
     gpio_init(CLK);
     gpio_set_dir(CLK, GPIO_OUT);
 
+    // Setup IRQ callbacks
+    gpio_set_irq_enabled_with_callback(CLK, GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL, true, &clock_edge_callback);
+
     // Setup PIO State Machine
     uint miso_offset = pio_add_program(pio0, &dummy_flash_program);
     // uint miso_sm = pio_claim_unused_sm(pio, true);
@@ -139,3 +151,13 @@ int main() {
         sleep_ms(250);
     }
 }
+
+/***
+ * Bind CLK as input to CPU
+ * Put ISR on both edges of CLK
+ * Record start time on rise
+ * Record duration on fall
+ * > CLOCK_US: do nothing
+ * > MISO_US: reset/start MISO DMA
+ * > MOSI_US: stop/abort MISO DMA
+***/
