@@ -5,29 +5,9 @@
 ; Pin mapping:
 ; IN 0 = CLK
 ; OUT 0 = DATA
-; SIDE 0 = DATA
 
 ; The MISO START pulse will have already been evaluated when the SM starts,
 ; so the first CLK pulse we see should be for a data bit
-
-;.program dummy_flash
-;.side_set 1 opt
-;.define BYTECNT 26	;Octet count of transmission
-;
-; Initialization
-;.wrap_target
-;	irq wait 0 		side 1  ;set IRQ 0, and halt until it's unset (by the CPU)	
-;	set x, BYTECNT	side 0	;initialize byte counter, set DATA low
-;nextbyte:
-;	pull 					;pull new byte into OSR from FIFO
-;	set y, 8				;initialize bit counter
-;nextbit:
-;	wait 1 pin 0			;wait for rising edge of clock (IN pin 0)
-;	out pins, 1 			;assert the next (1) bit from the OSR onto the DATA pin
-;	wait 0 pin 0 			;wait for falling edge of clock (IN pin 0)
-;	jmp y-- nextbit			;decrement bit counter, loop
-;	jmp x-- nextbyte		;decrement byte counter, loop
-;.wrap
 
 .program dummy_flash
 
@@ -41,19 +21,17 @@
 static inline void dummy_flash_program_init(PIO pio, uint sm, uint offset, uint clkpin, uint datapin) {
     pio_sm_config c = dummy_flash_program_get_default_config(offset);
 
-    // Map the data/clock pins
-    // Clock is IN pin 0, Data is OUT pin 0 and side-set pin 0
+    // Map Clock to IN pin 0, Data to OUT pin 0
     sm_config_set_in_pins(&c, clkpin);
     sm_config_set_out_pins(&c, datapin, 1);
-    // sm_config_set_sideset_pins(&c, datapin);
 
-    // Initialize output pins (connect PIO to the pad)
+    // Initialize output pin (connect PIO to the pad)
     pio_gpio_init(pio, datapin);
 
     // for MISO, CLK is input, DATA is output
     pio_sm_set_consecutive_pindirs(pio, sm, datapin, 1, true);
 
-    // Configure autopulling, MSB first, every 8 bits
+    // Autopull, MSB first, every 8 bits
     sm_config_set_out_shift(&c, false, true, 8);
 
     // Load our configuration, and jump to the start of the program
