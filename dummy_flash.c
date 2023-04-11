@@ -65,10 +65,6 @@ volatile int bytecount = 0;
 volatile int bitcount = 0;
 volatile int state = STATE_IDLE;
 
-void __isr miso_complete_handler() {
-    printf("DMA Transfer Complete");
-}
-
 // Configure DMA to feed data to the PIO state machine for
 // shifting into the body
 void miso_dma_setup(PIO pio, uint sm, uint dma_chan) {
@@ -87,19 +83,12 @@ void miso_dma_setup(PIO pio, uint sm, uint dma_chan) {
         miso_packet_length, // Transfer count (size of source array)
         false               // Don't start yet
     );
-
-    // Setup interrupt return handlers to service end-of-data
-    irq_set_exclusive_handler(DMA_IRQ_0, miso_complete_handler);
-    dma_channel_set_irq0_enabled(dma_chan, true);
-    irq_set_enabled(dma_chan, true);
 }
 
 void miso_dma_send_packet(PIO pio, uint sm, uint dma_chan) {
     // Point DMA chan back at beginning of miso data array, reset its counter,
     // and start it
-    printf("Starting DMA Channel\n");
     dma_channel_set_read_addr(dma_chan, miso_packet, true);
-    // dma_channel_set_trans_count(dma_chan, miso_packet_length, true);
 }
 
 void generate_clock_byte() {
@@ -143,13 +132,6 @@ int main() {
 
     // Start SM - it will start waiting for data in TX FIFO
     pio_sm_set_enabled(pio0, miso_sm, true);
-
-    // Manually load some data into the SM's TX FIFO
-    // Only the MSB 8 bits of each word are used
-    // pio_sm_put_blocking(pio0, miso_sm, (uint32_t)0xAA000000);
-    // pio_sm_put_blocking(pio0, miso_sm, (uint32_t)0x55000000);
-    // pio_sm_put_blocking(pio0, miso_sm, (uint32_t)0xAA000000);
-    // pio_sm_put_blocking(pio0, miso_sm, (uint32_t)0x55000000);
 
     while(true) {
         miso_dma_send_packet(pio0, miso_sm, 0);
