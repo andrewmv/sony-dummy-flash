@@ -85,6 +85,25 @@ void generate_clock_multibyte(int count) {
     gpio_put(PICO_DEFAULT_LED_PIN, 0);
 }
 
+void generate_miso_packet_clock() {
+    // Drive a start pulse   
+    gpio_put(CLK, 1);
+    sleep_us(MISO_INIT_US);
+    gpio_put(CLK, 0);
+    sleep_us(400);
+    // Now clock some bits
+    generate_clock_multibyte(miso_packet_length);
+}
+
+void generate_mosi_packet_clock() {
+    // Drive a start pulse
+    gpio_put(CLK, 1);
+    sleep_us(MISO_INIT_US);
+    gpio_put(CLK, 0);
+    sleep_us(400);
+    generate_clock_multibyte(14);
+}
+
 int main() {
     // Setup Serial
     stdio_init_all();
@@ -112,17 +131,9 @@ int main() {
 
     while(true) {
         // miso_dma_send_packet(pio0, miso_sm, 0);
-        generate_clock_multibyte(miso_packet_length);
+        generate_miso_packet_clock();
+        sleep_ms(250);
+        generate_mosi_packet_clock();
         sleep_ms(250);
     }
 }
-
-/***
- * Bind CLK as input to CPU
- * Put ISR on both edges of CLK
- * Record start time on rise
- * Record duration on fall
- * > CLOCK_US: do nothing
- * > MISO_US: reset/start MISO DMA
- * > MOSI_US: stop/abort MISO DMA
-***/
