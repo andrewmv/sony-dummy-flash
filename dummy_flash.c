@@ -29,24 +29,19 @@ void clock_edge_callback(uint gpio, uint32_t events) {
         } else if (duration_us > SYNC_US) {
             state = STATE_IDLE;
             pio_sm_set_enabled(miso_pio, miso_sm, false);
-        } else if (duration_us > MOSI_INIT_US) {
-            // MOSI start signal detected
-            state = STATE_TX_MOSI;
-            // Disable MISO state machine
-            pio_sm_set_enabled(miso_pio, miso_sm, false);
-            // Release data line
-            gpio_put(DATA, 0);
-            gpio_set_dir(DATA, GPIO_IN);
-        } else if (duration_us > MISO_INIT_US) {
-            // MISO Start signal detected 
-            state = STATE_TX_MISO;
-            gpio_set_dir(DATA, GPIO_OUT);
-            // Start SM - it will start waiting for data in TX FIFO
-            pio_sm_restart(miso_pio, miso_sm);
-            pio_sm_clear_fifos(miso_pio, miso_sm);
-            pio_sm_set_enabled(miso_pio, miso_sm, true);
-            // Start DMA to fill TX FIFO
-            miso_dma_send_packet();
+            pio_sm_set_enabled(miso_pio, miso_sm, false);   // Disable MISO state machine
+            gpio_init(DATA);                                // Set DATA pin function to GPIO
+        } else if (duration_us > MOSI_INIT_US) {         // MOSI start signal detected
+            state = STATE_TX_MOSI;                          // Update what state we're in
+            pio_sm_set_enabled(miso_pio, miso_sm, false);   // Disable MISO state machine
+            gpio_init(DATA);                                // Set DATA pin function to GPIO
+        } else if (duration_us > MISO_INIT_US) {         // MISO Start signal detected
+            state = STATE_TX_MISO;                          // Update what state we're in
+            pio_gpio_init(miso_pio, DATA);                  // Set DATA pin function to PIO
+            pio_sm_restart(miso_pio, miso_sm);              // Put PIO in known state
+            pio_sm_clear_fifos(miso_pio, miso_sm);          // Nuke any unshifted data from last tx
+            pio_sm_set_enabled(miso_pio, miso_sm, true);    // Start PIO
+            miso_dma_send_packet();                         // Start DMA to fill TX FIFO
         }
 
     }
@@ -125,8 +120,8 @@ int main() {
     gpio_set_dir(PICO_DEFAULT_LED_PIN, GPIO_OUT);
     gpio_init(CLK);
     gpio_set_dir(CLK, GPIO_IN);
-    gpio_init(DATA);
-    gpio_set_dir(DATA, GPIO_OUT);
+    // IRQ callback will init this later
+    gpio_set_dir(DATA, GPIO_IN);
 
     // Setup IRQ callbacks
     gpio_set_irq_enabled_with_callback(CLK, GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL, true, &clock_edge_callback);
