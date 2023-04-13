@@ -28,13 +28,24 @@ void clock_edge_callback(uint gpio, uint32_t events) {
             return;
         } else if (duration_us > SYNC_US) {
             state = STATE_IDLE;
-            // Not implemented
+            pio_sm_set_enabled(miso_pio, miso_sm, false);
         } else if (duration_us > MOSI_INIT_US) {
+            // MOSI start signal detected
             state = STATE_TX_MOSI;
-            // Not implemented
+            // Disable MISO state machine
+            pio_sm_set_enabled(miso_pio, miso_sm, false);
+            // Release data line
+            gpio_put(DATA, 0);
+            gpio_set_dir(DATA, GPIO_IN);
         } else if (duration_us > MISO_INIT_US) {
-            // MISO Start signal detected - change state and start TX DMA
+            // MISO Start signal detected 
             state = STATE_TX_MISO;
+            gpio_set_dir(DATA, GPIO_OUT);
+            // Start SM - it will start waiting for data in TX FIFO
+            pio_sm_restart(miso_pio, miso_sm);
+            pio_sm_clear_fifos(miso_pio, miso_sm);
+            pio_sm_set_enabled(miso_pio, miso_sm, true);
+            // Start DMA to fill TX FIFO
             miso_dma_send_packet();
         }
 
@@ -98,7 +109,7 @@ void generate_miso_packet_clock() {
 void generate_mosi_packet_clock() {
     // Drive a start pulse
     gpio_put(CLK, 1);
-    sleep_us(MISO_INIT_US);
+    sleep_us(MOSI_INIT_US);
     gpio_put(CLK, 0);
     sleep_us(400);
     generate_clock_multibyte(14);
@@ -113,7 +124,9 @@ int main() {
     gpio_init(PICO_DEFAULT_LED_PIN);
     gpio_set_dir(PICO_DEFAULT_LED_PIN, GPIO_OUT);
     gpio_init(CLK);
-    gpio_set_dir(CLK, GPIO_OUT);
+    gpio_set_dir(CLK, GPIO_IN);
+    gpio_init(DATA);
+    gpio_set_dir(DATA, GPIO_OUT);
 
     // Setup IRQ callbacks
     gpio_set_irq_enabled_with_callback(CLK, GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL, true, &clock_edge_callback);
@@ -126,14 +139,11 @@ int main() {
     miso_dma_chan = dma_claim_unused_channel(true);
     miso_dma_setup(miso_pio, miso_sm, miso_dma_chan);
 
-    // Start SM - it will start waiting for data in TX FIFO
-    pio_sm_set_enabled(miso_pio, miso_sm, true);
-
     while(true) {
         // miso_dma_send_packet(pio0, miso_sm, 0);
-        generate_miso_packet_clock();
-        sleep_ms(250);
-        generate_mosi_packet_clock();
-        sleep_ms(250);
+        // generate_miso_packet_clock();
+        // sleep_ms(250);
+        // generate_mosi_packet_clock();
+        // sleep_ms(250);
     }
 }
