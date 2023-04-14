@@ -25,9 +25,6 @@ static inline void dummy_flash_program_init(PIO pio, uint sm, uint offset, uint 
     sm_config_set_in_pins(&c, clkpin);
     sm_config_set_out_pins(&c, datapin, 1);
 
-    // for MISO, CLK is input, DATA is output
-    pio_sm_set_consecutive_pindirs(pio, sm, datapin, 1, true);
-
     // Deliberately not selecting the PIO function for the DATA pin yet
 
     // Autopull, MSB first, every 8 bits

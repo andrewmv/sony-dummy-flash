@@ -28,35 +28,44 @@
 #define STATE_TX_MISO 1
 #define STATE_TX_MOSI 2
 
-const int miso_packet_length = 26;
+const int miso_packet_length = 5;
 const uint8_t miso_packet[] = {
-    0xFF, 
-    0xFD, 
-    0xFF, 
-    0xFF, 
-    0xC9, 
-    0xFF, 
-    0xBF, 
-    0xF7, 
-    0x70, 
-    0x06, 
-    0x7F, 
-    0xBF, 
-    0x4C, 
-    0x00, 
-    0xA8, 
-    0x88, 
-    0x88, 
-    0x88, 
-    0x88, 
-    0x88, 
-    0x88, 
-    0x88, 
-    0x88, 
-    0x1B, 
-    0xFF, 
-    0x1A
+    0x12,
+    0x34,
+    0x56,
+    0x78,
+    0x9a
 };
+
+// const int miso_packet_length = 26;
+// const uint8_t miso_packet[] = {
+//     0xFF, 
+//     0xFD, 
+//     0xFF, 
+//     0xFF, 
+//     0xC9, 
+//     0xFF, 
+//     0xBF, 
+//     0xF7, 
+//     0x70, 
+//     0x06, 
+//     0x7F, 
+//     0xBF, 
+//     0x4C, 
+//     0x00, 
+//     0xA8, 
+//     0x88, 
+//     0x88, 
+//     0x88, 
+//     0x88, 
+//     0x88, 
+//     0x88, 
+//     0x88, 
+//     0x88, 
+//     0x1B, 
+//     0xFF, 
+//     0x1A
+// };
 
 volatile absolute_time_t risetime = 0;
 volatile uint8_t bytecount = 0;
@@ -76,6 +85,7 @@ uint8_t mosi_offset;
 
 void clock_edge_callback(uint gpio, uint32_t events);
 void miso_dma_setup(PIO pio, uint sm, uint dma_chan);
-void miso_dma_send_packet();
 void generate_clock_byte();
 void generate_clock_multibyte(int count);
+void start_miso_tx();
+void start_mosi_rx();
