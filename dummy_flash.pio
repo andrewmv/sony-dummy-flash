@@ -31,8 +31,8 @@ static inline void dummy_flash_program_init(PIO pio, uint sm, uint offset, uint 
     // for MISO, CLK is input, DATA is output
     pio_sm_set_consecutive_pindirs(pio, sm, datapin, 1, true);
 
-    // Autopull, MSB first, every 8 bits
-    sm_config_set_out_shift(&c, false, true, 8);
+    // Autopull, LSB first, enabled, every 8 bits
+    sm_config_set_out_shift(&c, true, true, 8);
 
     // Load our configuration, and jump to the start of the program
     pio_sm_init(pio, sm, offset, &c);
