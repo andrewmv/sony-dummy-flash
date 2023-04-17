@@ -6,43 +6,69 @@
  */
 
 #include <stdio.h>
+#include "dummy_flash.h"
 #include "pico/stdlib.h"
 #include "hardware/pio.h"
 #include "hardware/dma.h"
 #include "hardware/gpio.h"
 #include "dummy_flash.pio.h"
 
-// Define GPIOs
-#define CLK 2
-#define DATA 3
-#define TRIG 4
-#define F1 4
+// Callbacks for edge changes on CLK
+void clock_edge_callback(uint gpio, uint32_t events) {
+    uint64_t duration_us = 0;
+    if (events & GPIO_IRQ_EDGE_RISE) {
+        risetime = get_absolute_time();
+        return;
+    } else if (events & GPIO_IRQ_EDGE_FALL) {
+        absolute_time_t falltime = get_absolute_time();
+        duration_us = absolute_time_diff_us(risetime, falltime);
 
-// Define timing constants
-#define CLOCK_US 6
-#define MISO_INIT_US 80
-#define MOSI_INIT_US 150
-#define SYNC_US 260
+        if (duration_us == 0) {
+            // Ignore first falling edge if we powered on while CLK was high
+            return;
+        } else if (duration_us > SYNC_US) {
+            state = STATE_IDLE;
+            //pio_sm_set_enabled(miso_pio, miso_sm, false);   // Disable MISO state machine
+            //gpio_init(DATA);                                // Set DATA pin function to GPIO
+        } else if (duration_us > MOSI_INIT_US) {         // MOSI start signal detected
+            //start_mosi_rx();
+        } else if (duration_us > MISO_INIT_US) {         // MISO Start signal detected
+            start_miso_tx();
+        }
 
-// Define machine states
-#define STATE_IDLE 0
-#define STATE_TX_MISO 1
+    }
+}
 
-const int miso_packet_length = 5;
-const uint8_t miso_packet[] = {
-    0x12, 
-    0x34, 
-    0x56, 
-    0x78, 
-    0x9a, 
-};
-// const uint8_t miso_packet[] = {0xFF, 0xFD, 0xFF, 0xFF, 0xC9, 0xFF, 0xBF, 0xF7, 0x70, 0x06, 0x7F, 0xBF, 0x4C, 0x00, 0xA8, 0x88, 0x88, 0x88, 0x88, 0x88, 0x88, 0x88, 0x88, 0x1B, 0xFF, 0x1A};
-// const byte miso_packet[] = {0xAA, 0x55};
+void start_miso_tx() {
+    state = STATE_TX_MISO;                          // Track what state we're in
 
-volatile unsigned long risetime = 0;
-volatile int bytecount = 0;
-volatile int bitcount = 0;
-volatile int state = STATE_IDLE;
+    // Attach DATA pin function to TX PIO and set direction
+    pio_gpio_init(miso_pio, DATA);                  
+    pio_sm_set_consecutive_pindirs(miso_pio, miso_sm, DATA, 1, true);
+
+    // Nuke any unshifted data from FIFO
+    pio_sm_clear_fifos(miso_pio, miso_sm);
+
+    // Start PIO SM
+    pio_sm_set_enabled(miso_pio, miso_sm, true);    
+ 
+    // Force SM to beginning of program
+    pio_sm_exec_wait_blocking(miso_pio, miso_sm, pio_encode_jmp(miso_offset)); 
+
+    // Nuke any unshifted data from OSR 
+    pio_sm_exec_wait_blocking(miso_pio, miso_sm, pio_encode_out(pio_null, 32)); 
+
+    // Start DMA to fill TX FIFO
+    dma_channel_set_read_addr(miso_dma_chan, miso_packet, true);      
+}
+
+void start_mosi_rx() {
+    state = STATE_TX_MOSI;                          // Track what state we're in
+    pio_sm_set_enabled(miso_pio, miso_sm, false);   // Disable MISO state machine
+    dma_channel_abort(miso_dma_chan);               // Stop MISO DMA
+    gpio_init(DATA);                                // Set DATA pin function to GPIO
+    gpio_set_dir(DATA, GPIO_IN);
+}
 
 // Configure DMA to feed data to the PIO state machine for
 // shifting into the body
@@ -64,12 +90,6 @@ void miso_dma_setup(PIO pio, uint sm, uint dma_chan) {
     );
 }
 
-void miso_dma_send_packet(PIO pio, uint sm, uint dma_chan) {
-    // Point DMA chan back at beginning of miso data array, reset its counter,
-    // and start it
-    dma_channel_set_read_addr(dma_chan, miso_packet, true);
-}
-
 void generate_clock_byte() {
     for (int i = 0; i < 8; i++) {
         gpio_put(CLK, 1);
@@ -88,6 +108,25 @@ void generate_clock_multibyte(int count) {
     gpio_put(PICO_DEFAULT_LED_PIN, 0);
 }
 
+void generate_miso_packet_clock() {
+    // Drive a start pulse   
+    gpio_put(CLK, 1);
+    sleep_us(MISO_INIT_US + 10);
+    gpio_put(CLK, 0);
+    sleep_us(400);
+    // Now clock some bits
+    generate_clock_multibyte(miso_packet_length);
+}
+
+void generate_mosi_packet_clock() {
+    // Drive a start pulse
+    gpio_put(CLK, 1);
+    sleep_us(MOSI_INIT_US + 10);
+    gpio_put(CLK, 0);
+    sleep_us(400);
+    generate_clock_multibyte(14);
+}
+
 int main() {
     // Setup Serial
     stdio_init_all();
@@ -100,21 +139,21 @@ int main() {
     gpio_set_dir(CLK, GPIO_OUT);
 
     // Setup PIO State Machine
-    uint miso_offset = pio_add_program(pio0, &dummy_flash_program);
-    // uint miso_sm = pio_claim_unused_sm(pio, true);
-    uint miso_sm = 0;
-    dummy_flash_program_init(pio0, miso_sm, miso_offset, CLK, DATA);
+    uint miso_offset = pio_add_program(miso_pio, &dummy_flash_program);
+    dummy_flash_program_init(miso_pio, miso_sm, miso_offset, CLK, DATA);
+    // pio_sm_set_enabled(miso_pio, miso_sm, true);    
 
     // Setup DMA
-    uint dma_chan = dma_claim_unused_channel(true);
-    miso_dma_setup(pio0, 0, dma_chan);
+    miso_dma_chan = dma_claim_unused_channel(true);
+    miso_dma_setup(miso_pio, miso_sm, miso_dma_chan);
 
-    // Start SM - it will start waiting for data in TX FIFO
-    pio_sm_set_enabled(pio0, miso_sm, true);
+    // Setup IRQ callbacks
+    gpio_set_irq_enabled_with_callback(CLK, GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL, true, &clock_edge_callback);
 
     while(true) {
-        miso_dma_send_packet(pio0, miso_sm, 0);
-        generate_clock_multibyte(miso_packet_length);
+        generate_miso_packet_clock();
+        sleep_ms(250);
+        generate_mosi_packet_clock();
         sleep_ms(250);
     }
 }
