@@ -46,25 +46,30 @@ void start_miso_tx() {
     // hw_clear_bits(&dma_channel_hw_addr(miso_dma_chan)->ctrl_trig, DMA_CH0_CTRL_TRIG_EN_BITS);
 
     // miso_pio->ctrl = PIO_CTRL_SM_RESTART_BITS;      // Reset and disable all SMs on this PIO
-    // pio_sm_clear_fifos(miso_pio, miso_sm);          // Nuke any unshifted data from last tx
 
     // Attach DATA pin function to TX PIO and set direction
     pio_gpio_init(miso_pio, DATA);                  
     pio_sm_set_consecutive_pindirs(miso_pio, miso_sm, DATA, 1, true);
 
     // Reset SM program counter
-    // pio_sm_exec(miso_pio, miso_sm, pio_encode_jmp(miso_offset)); 
+    pio_sm_exec(miso_pio, miso_sm, pio_encode_jmp(miso_offset)); 
+
+    // Nuke any unshifted data from last tx, FIFO and OSR respectively
+    pio_sm_clear_fifos(miso_pio, miso_sm);
+    // pio_sm_exec(miso_pio, miso_sm, pio_encode_pull(false, true)); 
+    pio_sm_exec(miso_pio, miso_sm, pio_encode_out(pio_null, 32)); 
+ 
+    // Start DMA to fill TX FIFO
+    dma_channel_set_read_addr(miso_dma_chan, miso_packet, true);      
 
     // Start PIO
     pio_sm_set_enabled(miso_pio, miso_sm, true);    
-
-    // Start DMA to fill TX FIFO
-    dma_channel_set_read_addr(miso_dma_chan, miso_packet, true);    
 }
 
 void start_mosi_rx() {
     state = STATE_TX_MOSI;                          // Track what state we're in
     pio_sm_set_enabled(miso_pio, miso_sm, false);   // Disable MISO state machine
+    dma_channel_abort(miso_dma_chan);               // Stop MISO DMA
     gpio_init(DATA);                                // Set DATA pin function to GPIO
     gpio_set_dir(DATA, GPIO_IN);
 }
@@ -136,11 +141,11 @@ int main() {
     gpio_set_dir(PICO_DEFAULT_LED_PIN, GPIO_OUT);
     gpio_init(CLK);
     gpio_set_dir(CLK, GPIO_OUT);
-    // IRQ callback will init this later
 
     // Setup PIO State Machine
     uint miso_offset = pio_add_program(miso_pio, &dummy_flash_program);
     dummy_flash_program_init(miso_pio, miso_sm, miso_offset, CLK, DATA);
+    // pio_sm_set_enabled(miso_pio, miso_sm, true);    
 
     // Setup DMA
     miso_dma_chan = dma_claim_unused_channel(true);
