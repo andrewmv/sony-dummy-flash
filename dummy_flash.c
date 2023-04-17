@@ -42,28 +42,24 @@ void clock_edge_callback(uint gpio, uint32_t events) {
 void start_miso_tx() {
     state = STATE_TX_MISO;                          // Track what state we're in
 
-    // Stop DMA
-    // hw_clear_bits(&dma_channel_hw_addr(miso_dma_chan)->ctrl_trig, DMA_CH0_CTRL_TRIG_EN_BITS);
-
-    // miso_pio->ctrl = PIO_CTRL_SM_RESTART_BITS;      // Reset and disable all SMs on this PIO
-
     // Attach DATA pin function to TX PIO and set direction
     pio_gpio_init(miso_pio, DATA);                  
     pio_sm_set_consecutive_pindirs(miso_pio, miso_sm, DATA, 1, true);
 
-    // Reset SM program counter
-    pio_sm_exec(miso_pio, miso_sm, pio_encode_jmp(miso_offset)); 
-
-    // Nuke any unshifted data from last tx, FIFO and OSR respectively
+    // Nuke any unshifted data from FIFO
     pio_sm_clear_fifos(miso_pio, miso_sm);
-    // pio_sm_exec(miso_pio, miso_sm, pio_encode_pull(false, true)); 
-    pio_sm_exec(miso_pio, miso_sm, pio_encode_out(pio_null, 32)); 
- 
-    // Start DMA to fill TX FIFO
-    dma_channel_set_read_addr(miso_dma_chan, miso_packet, true);      
 
     // Start PIO
     pio_sm_set_enabled(miso_pio, miso_sm, true);    
+ 
+    // Reset SM program counter
+    pio_sm_exec_wait_blocking(miso_pio, miso_sm, pio_encode_jmp(miso_offset)); 
+
+    // Nuke any unshifted data from OSR, 
+    pio_sm_exec_wait_blocking(miso_pio, miso_sm, pio_encode_out(pio_null, 32)); 
+
+    // Start DMA to fill TX FIFO
+    dma_channel_set_read_addr(miso_dma_chan, miso_packet, true);      
 }
 
 void start_mosi_rx() {

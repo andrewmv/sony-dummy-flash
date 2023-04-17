@@ -27,7 +27,7 @@ static inline void dummy_flash_program_init(PIO pio, uint sm, uint offset, uint 
 
     // Deliberately not selecting the PIO function for the DATA pin yet
 
-    // Autopull, LSB first, enabled, every 8 bits
+    // OSR Shift: LSB first, Autopull enabled, every 8 bits
     sm_config_set_out_shift(&c, true, true, 8);
 
     // Load our configuration, and jump to the start of the program
