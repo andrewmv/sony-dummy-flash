@@ -49,13 +49,13 @@ void start_miso_tx() {
     // Nuke any unshifted data from FIFO
     pio_sm_clear_fifos(miso_pio, miso_sm);
 
-    // Start PIO
+    // Start PIO SM
     pio_sm_set_enabled(miso_pio, miso_sm, true);    
  
-    // Reset SM program counter
+    // Force SM to beginning of program
     pio_sm_exec_wait_blocking(miso_pio, miso_sm, pio_encode_jmp(miso_offset)); 
 
-    // Nuke any unshifted data from OSR, 
+    // Nuke any unshifted data from OSR 
     pio_sm_exec_wait_blocking(miso_pio, miso_sm, pio_encode_out(pio_null, 32)); 
 
     // Start DMA to fill TX FIFO
