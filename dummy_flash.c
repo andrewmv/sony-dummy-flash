@@ -31,7 +31,7 @@ void clock_edge_callback(uint gpio, uint32_t events) {
             //pio_sm_set_enabled(miso_pio, miso_sm, false);   // Disable MISO state machine
             //gpio_init(DATA);                                // Set DATA pin function to GPIO
         } else if (duration_us > MOSI_INIT_US) {         // MOSI start signal detected
-            //start_mosi_rx();
+            start_mosi_rx();
         } else if (duration_us > MISO_INIT_US) {         // MISO Start signal detected
             start_miso_tx();
         }
@@ -115,7 +115,7 @@ void generate_miso_packet_clock() {
     gpio_put(CLK, 0);
     sleep_us(400);
     // Now clock some bits
-    generate_clock_multibyte(miso_packet_length);
+    generate_clock_multibyte(miso_packet_length - 1);
 }
 
 void generate_mosi_packet_clock() {
