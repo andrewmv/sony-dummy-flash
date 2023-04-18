@@ -68,6 +68,7 @@ void start_mosi_rx() {
     dma_channel_abort(miso_dma_chan);               // Stop MISO DMA
     gpio_init(DATA);                                // Set DATA pin function to GPIO
     gpio_set_dir(DATA, GPIO_IN);
+    gpio_pull_up(DATA);
 }
 
 // Configure DMA to feed data to the PIO state machine for
@@ -115,7 +116,7 @@ void generate_miso_packet_clock() {
     gpio_put(CLK, 0);
     sleep_us(400);
     // Now clock some bits
-    generate_clock_multibyte(miso_packet_length - 1);
+    generate_clock_multibyte(miso_packet_length);
 }
 
 void generate_mosi_packet_clock() {
@@ -136,7 +137,11 @@ int main() {
     gpio_init(PICO_DEFAULT_LED_PIN);
     gpio_set_dir(PICO_DEFAULT_LED_PIN, GPIO_OUT);
     gpio_init(CLK);
+#ifdef TESTCLOCK
     gpio_set_dir(CLK, GPIO_OUT);
+#else
+    gpio_set_dir(CLK, GPIO_IN);
+#endif
 
     // Setup PIO State Machine
     uint miso_offset = pio_add_program(miso_pio, &dummy_flash_program);
@@ -151,9 +156,11 @@ int main() {
     gpio_set_irq_enabled_with_callback(CLK, GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL, true, &clock_edge_callback);
 
     while(true) {
+#ifdef TESTCLOCK        
         generate_miso_packet_clock();
         sleep_ms(250);
         generate_mosi_packet_clock();
         sleep_ms(250);
+#endif
     }
 }
