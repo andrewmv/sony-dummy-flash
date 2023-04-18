@@ -40,7 +40,8 @@ void clock_edge_callback(uint gpio, uint32_t events) {
 }
 
 void start_miso_tx() {
-    state = STATE_TX_MISO;                          // Track what state we're in
+    // Track what state we're in (not using this yet)
+    state = STATE_TX_MISO;
 
     // Attach DATA pin function to TX PIO and set direction
     pio_gpio_init(miso_pio, DATA);                  
@@ -63,12 +64,25 @@ void start_miso_tx() {
 }
 
 void start_mosi_rx() {
-    state = STATE_TX_MOSI;                          // Track what state we're in
-    pio_sm_set_enabled(miso_pio, miso_sm, false);   // Disable MISO state machine
-    dma_channel_abort(miso_dma_chan);               // Stop MISO DMA
-    gpio_init(DATA);                                // Set DATA pin function to GPIO
-    gpio_set_dir(DATA, GPIO_IN);
-    gpio_pull_up(DATA);
+    // Track what state we're in (not using this yet)
+    state = STATE_RX_MOSI;
+
+    // Disable TX/MISO state machine
+    pio_sm_set_enabled(miso_pio, miso_sm, false);
+
+    // Stop TX/MISO DMA, in case TX was interrupted early
+    dma_channel_abort(miso_dma_chan);
+
+    // Switch DATA pin function from PIO to GPIO
+    gpio_init(DATA);
+
+    // Drive DATA high at 2mA for the entire transmission - the body will
+    // assert by pulling it low.
+    // Note that the RP2040's built-in pull-up function is too weak to keep
+    // the line high.
+    gpio_set_dir(DATA, GPIO_OUT);
+    gpio_set_drive_strength(DATA, GPIO_DRIVE_STRENGTH_2MA);
+    gpio_put(DATA, 1);
 }
 
 // Configure DMA to feed data to the PIO state machine for
