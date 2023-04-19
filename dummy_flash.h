@@ -6,6 +6,7 @@
  */
 
 #include <stdio.h>
+#include <string.h>
 #include "pico/stdlib.h"
 #include "hardware/pio.h"
 #include "hardware/dma.h"
@@ -70,6 +71,10 @@ const uint8_t miso_packet[] = {
     0xFF, 
     0x1A
 };
+
+#define mosi_packet_length 14
+uint8_t new_mosi_packet[mosi_packet_length];
+uint8_t old_mosi_packet[mosi_packet_length];
 
 volatile absolute_time_t risetime = 0;
 volatile uint8_t bytecount = 0;

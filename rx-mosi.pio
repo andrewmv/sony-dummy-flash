@@ -1,0 +1,36 @@
+; Sony MI-SPI state machine for decoding data in the MOSI direction
+; (Reading data sent from a body to a flash)
+; 2023/04 Andrew Villeneuve
+
+; Pin mapping:
+; IN 0 = CLK
+; IN 1 = DATA
+
+; The MOSI START pulse will have already been evaluated when the SM starts,
+; so the first CLK pulse we see should be for a data bit
+
+.program mosi
+
+.wrap_target
+	wait 1 pin 0			;wait for rising edge of clock (IN pin 0)
+	in pins, 1 			    ;read the level of the DATA pin into the ISR
+	wait 0 pin 0 			;wait for falling edge of clock (IN pin 0)
+.wrap
+
+% c-sdk {
+static inline void mosi_program_init(PIO pio, uint sm, uint offset, uint clkpin, uint datapin) {
+    pio_sm_config c = mosi_program_get_default_config(offset);
+
+    // Map Clock to IN pin 0, Data to IN pin 1
+    sm_config_set_in_pins(&c, clkpin);
+    sm_config_set_in_pins(&c, datapin);
+
+    // Deliberately not selecting the PIO function for the DATA pin yet
+
+    // ISR Shift: shift right, autopush enabled, every 8 bits
+    sm_config_set_in_shift(&c, true, true, 8);
+
+    // Load our configuration, and jump to the start of the program
+    pio_sm_init(pio, sm, offset, &c);
+}
+%}

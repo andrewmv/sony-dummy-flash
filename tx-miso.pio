@@ -9,7 +9,7 @@
 ; The MISO START pulse will have already been evaluated when the SM starts,
 ; so the first CLK pulse we see should be for a data bit
 
-.program dummy_flash
+.program miso
 
 .wrap_target
 	wait 1 pin 0			;wait for rising edge of clock (IN pin 0)
@@ -18,8 +18,8 @@
 .wrap
 
 % c-sdk {
-static inline void dummy_flash_program_init(PIO pio, uint sm, uint offset, uint clkpin, uint datapin) {
-    pio_sm_config c = dummy_flash_program_get_default_config(offset);
+static inline void miso_program_init(PIO pio, uint sm, uint offset, uint clkpin, uint datapin) {
+    pio_sm_config c = miso_program_get_default_config(offset);
 
     // Map Clock to IN pin 0, Data to OUT pin 0
     sm_config_set_in_pins(&c, clkpin);
