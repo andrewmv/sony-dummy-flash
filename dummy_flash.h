@@ -67,9 +67,9 @@ const uint8_t miso_packet[] = {
 //     0x1A
 // };
 
-volatile absolute_time_t risetime = 0;
-volatile uint8_t bytecount = 0;
-volatile uint8_t bitcount = 0;
+volatile absolute_time_t risetime;
+// volatile uint8_t bytecount = 0;
+// volatile uint8_t bitcount = 0;
 volatile uint8_t state = STATE_IDLE;
 
 // DMA and PIO variables

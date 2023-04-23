@@ -31,7 +31,7 @@ void clock_edge_callback(uint gpio, uint32_t events) {
             //pio_sm_set_enabled(miso_pio, miso_sm, false);   // Disable MISO state machine
             //gpio_init(DATA);                                // Set DATA pin function to GPIO
         } else if (duration_us > MOSI_INIT_US) {         // MOSI start signal detected
-            //start_mosi_rx();
+            start_mosi_rx();
         } else if (duration_us > MISO_INIT_US) {         // MISO Start signal detected
             start_miso_tx();
         }
@@ -49,14 +49,11 @@ void start_miso_tx() {
     // Nuke any unshifted data from FIFO
     pio_sm_clear_fifos(miso_pio, miso_sm);
 
-    // Start PIO SM
-    pio_sm_set_enabled(miso_pio, miso_sm, true);    
- 
+    // Restart and Enable PIO SM (sets OSR shift counter to Empty)
+    miso_pio->ctrl = PIO_CTRL_SM_RESTART_BITS | PIO_CTRL_SM_ENABLE_BITS;
+
     // Force SM to beginning of program
     pio_sm_exec_wait_blocking(miso_pio, miso_sm, pio_encode_jmp(miso_offset)); 
-
-    // Nuke any unshifted data from OSR 
-    pio_sm_exec_wait_blocking(miso_pio, miso_sm, pio_encode_out(pio_null, 32)); 
 
     // Start DMA to fill TX FIFO
     dma_channel_set_read_addr(miso_dma_chan, miso_packet, true);      
