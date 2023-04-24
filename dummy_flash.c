@@ -44,20 +44,19 @@ void start_miso_tx() {
     state = STATE_TX_MISO;
 
     // Attach DATA pin function to TX PIO and set direction
-    pio_gpio_init(miso_pio, DATA);                  
+    pio_gpio_init(miso_pio, DATA);
     pio_sm_set_consecutive_pindirs(miso_pio, miso_sm, DATA, 1, true);
 
     // Nuke any unshifted data from FIFO
     pio_sm_clear_fifos(miso_pio, miso_sm);
 
-    // Start PIO SM
-    pio_sm_set_enabled(miso_pio, miso_sm, true);    
- 
+    // Restart and Enable PIO SM (sets OSR shift counter to Empty)
+    uint32_t restart_mask = (1u << PIO_CTRL_SM_RESTART_LSB << miso_sm);
+    restart_mask |= (1u << PIO_CTRL_SM_ENABLE_LSB << miso_sm);
+    miso_pio->ctrl = restart_mask;
+
     // Force SM to beginning of program
     pio_sm_exec_wait_blocking(miso_pio, miso_sm, pio_encode_jmp(miso_offset)); 
-
-    // Nuke any unshifted data from OSR 
-    pio_sm_exec_wait_blocking(miso_pio, miso_sm, pio_encode_out(pio_null, 32)); 
 
     // Start DMA to fill TX FIFO
     dma_channel_set_read_addr(miso_dma_chan, miso_packet, true);      
@@ -158,7 +157,7 @@ int main() {
 #endif
 
     // Setup PIO State Machine
-    uint miso_offset = pio_add_program(miso_pio, &dummy_flash_program);
+    miso_offset = pio_add_program(miso_pio, &dummy_flash_program);
     dummy_flash_program_init(miso_pio, miso_sm, miso_offset, CLK, DATA);
     // pio_sm_set_enabled(miso_pio, miso_sm, true);    
 

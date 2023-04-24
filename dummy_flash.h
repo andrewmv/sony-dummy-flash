@@ -11,10 +11,6 @@
 #include "hardware/dma.h"
 #include "hardware/gpio.h"
 
-// Uncomment to internally generate a testing clock for use
-// while NOT connected to a camera body
-// #define TESTCLOCK true
-
 // Define GPIOs
 #define CLK 2
 #define DATA 3
@@ -30,50 +26,50 @@
 // Define machine states
 #define STATE_IDLE 0
 #define STATE_TX_MISO 1
-#define STATE_RX_MOSI 2
+#define STATE_TX_MOSI 2
 
-// const int miso_packet_length = 5;
-// const uint8_t miso_packet[] = {
-//     0x12,
-//     0x34,
-//     0x56,
-//     0x78,
-//     0x9a
-// };
-
-const int miso_packet_length = 26;
+const int miso_packet_length = 5;
 const uint8_t miso_packet[] = {
-    0xFF, 
-    0xFD, 
-    0xFF, 
-    0xFF, 
-    0xC9, 
-    0xFF, 
-    0xBF, 
-    0xF7, 
-    0x70, 
-    0x06, 
-    0x7F, 
-    0xBF, 
-    0x4C, 
-    0x00, 
-    0xA8, 
-    0x88, 
-    0x88, 
-    0x88, 
-    0x88, 
-    0x88, 
-    0x88, 
-    0x88, 
-    0x88, 
-    0x1B, 
-    0xFF, 
-    0x1A
+    0x12,
+    0x34,
+    0x56,
+    0x78,
+    0x9a
 };
 
-volatile absolute_time_t risetime = 0;
-volatile uint8_t bytecount = 0;
-volatile uint8_t bitcount = 0;
+// const int miso_packet_length = 26;
+// const uint8_t miso_packet[] = {
+//     0xFF, 
+//     0xFD, 
+//     0xFF, 
+//     0xFF, 
+//     0xC9, 
+//     0xFF, 
+//     0xBF, 
+//     0xF7, 
+//     0x70, 
+//     0x06, 
+//     0x7F, 
+//     0xBF, 
+//     0x4C, 
+//     0x00, 
+//     0xA8, 
+//     0x88, 
+//     0x88, 
+//     0x88, 
+//     0x88, 
+//     0x88, 
+//     0x88, 
+//     0x88, 
+//     0x88, 
+//     0x1B, 
+//     0xFF, 
+//     0x1A
+// };
+
+volatile absolute_time_t risetime;
+// volatile uint8_t bytecount = 0;
+// volatile uint8_t bitcount = 0;
 volatile uint8_t state = STATE_IDLE;
 
 // DMA and PIO variables
