@@ -43,14 +43,16 @@ void start_miso_tx() {
     state = STATE_TX_MISO;                          // Track what state we're in
 
     // Attach DATA pin function to TX PIO and set direction
-    pio_gpio_init(miso_pio, DATA);                  
+    pio_gpio_init(miso_pio, DATA);
     pio_sm_set_consecutive_pindirs(miso_pio, miso_sm, DATA, 1, true);
 
     // Nuke any unshifted data from FIFO
     pio_sm_clear_fifos(miso_pio, miso_sm);
 
     // Restart and Enable PIO SM (sets OSR shift counter to Empty)
-    miso_pio->ctrl = PIO_CTRL_SM_RESTART_BITS | PIO_CTRL_SM_ENABLE_BITS;
+    uint32_t restart_mask = (1u << PIO_CTRL_SM_RESTART_LSB << miso_sm);
+    restart_mask |= (1u << PIO_CTRL_SM_ENABLE_LSB << miso_sm);
+    miso_pio->ctrl = restart_mask;
 
     // Force SM to beginning of program
     pio_sm_exec_wait_blocking(miso_pio, miso_sm, pio_encode_jmp(miso_offset)); 
