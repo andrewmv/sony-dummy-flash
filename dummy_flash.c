@@ -136,7 +136,7 @@ int main() {
     gpio_set_dir(CLK, GPIO_OUT);
 
     // Setup PIO State Machine
-    uint miso_offset = pio_add_program(miso_pio, &dummy_flash_program);
+    miso_offset = pio_add_program(miso_pio, &dummy_flash_program);
     dummy_flash_program_init(miso_pio, miso_sm, miso_offset, CLK, DATA);
     // pio_sm_set_enabled(miso_pio, miso_sm, true);    
 
