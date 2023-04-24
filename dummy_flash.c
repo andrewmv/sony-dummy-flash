@@ -150,16 +150,15 @@ int main() {
     gpio_init(PICO_DEFAULT_LED_PIN);
     gpio_set_dir(PICO_DEFAULT_LED_PIN, GPIO_OUT);
     gpio_init(CLK);
-#ifdef TESTCLOCK
+    #ifdef TESTCLOCK
     gpio_set_dir(CLK, GPIO_OUT);
-#else
+    #else
     gpio_set_dir(CLK, GPIO_IN);
-#endif
+    #endif
 
     // Setup PIO State Machine
     miso_offset = pio_add_program(miso_pio, &dummy_flash_program);
     dummy_flash_program_init(miso_pio, miso_sm, miso_offset, CLK, DATA);
-    // pio_sm_set_enabled(miso_pio, miso_sm, true);    
 
     // Setup DMA
     miso_dma_chan = dma_claim_unused_channel(true);
@@ -169,11 +168,11 @@ int main() {
     gpio_set_irq_enabled_with_callback(CLK, GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL, true, &clock_edge_callback);
 
     while(true) {
-#ifdef TESTCLOCK        
+        #ifdef TESTCLOCK        
         generate_miso_packet_clock();
         sleep_ms(250);
         generate_mosi_packet_clock();
         sleep_ms(250);
-#endif
+        #endif
     }
 }

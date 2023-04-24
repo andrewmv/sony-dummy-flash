@@ -11,6 +11,8 @@
 #include "hardware/dma.h"
 #include "hardware/gpio.h"
 
+#define TESTCLOCK true
+
 // Define GPIOs
 #define CLK 2
 #define DATA 3
@@ -26,7 +28,7 @@
 // Define machine states
 #define STATE_IDLE 0
 #define STATE_TX_MISO 1
-#define STATE_TX_MOSI 2
+#define STATE_RX_MOSI 2
 
 const int miso_packet_length = 5;
 const uint8_t miso_packet[] = {
