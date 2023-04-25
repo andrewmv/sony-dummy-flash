@@ -14,9 +14,9 @@ add_executable(sony_dummy_flash
 pico_generate_pio_header(sony_dummy_flash ${CMAKE_CURRENT_LIST_DIR}/tx-miso.pio)
 pico_generate_pio_header(sony_dummy_flash ${CMAKE_CURRENT_LIST_DIR}/rx-mosi.pio)
 
-# Enable serial console over USB
-pico_enable_stdio_usb(sony_dummy_flash 1)
-pico_enable_stdio_uart(sony_dummy_flash 0)
+# Enable serial console over UART
+pico_enable_stdio_usb(sony_dummy_flash 0)
+pico_enable_stdio_uart(sony_dummy_flash 1)
 
 pico_add_extra_outputs(sony_dummy_flash)
 
