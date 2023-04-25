@@ -33,7 +33,7 @@ void clock_edge_callback(uint gpio, uint32_t events) {
             pio_sm_set_enabled(miso_pio, miso_sm, false);
             pio_sm_set_enabled(mosi_pio, mosi_sm, false);
         } else if (duration_us > MOSI_INIT_US) {         // MOSI start signal detected
-            start_mosi_rx();
+            // start_mosi_rx();
         } else if (duration_us > MISO_INIT_US) {         // MISO Start signal detected
             start_miso_tx();
         } // ...else, a regular bit pulse. These are handled by the PIOs
@@ -61,7 +61,7 @@ void start_miso_tx() {
     state = STATE_TX_MISO;
 
     // Disable RX/MOSI state machine
-    pio_sm_set_enabled(mosi_pio, mosi_sm, true);    
+    pio_sm_set_enabled(mosi_pio, mosi_sm, false);
 
     // Stop RX/MOSI DMA
     dma_channel_abort(mosi_dma_chan);
@@ -184,10 +184,10 @@ int main() {
     #endif
 
     // Setup PIO State Machine
-    miso_offset = pio_add_program(miso_pio, &mosi_program);
+    miso_offset = pio_add_program(miso_pio, &miso_program);
     miso_program_init(miso_pio, miso_sm, miso_offset, CLK, DATA);
 
-    mosi_offset = pio_add_program(mosi_pio, &miso_program);
+    mosi_offset = pio_add_program(mosi_pio, &mosi_program);
     mosi_program_init(mosi_pio, mosi_sm, mosi_offset, CLK, DATA);
 
     // Setup DMA
