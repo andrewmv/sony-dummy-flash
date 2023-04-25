@@ -96,3 +96,9 @@ void generate_clock_byte();
 void generate_clock_multibyte(int count);
 void start_miso_tx();
 void start_mosi_rx();
+
+// Functions used for generating testing a testing clock when TESTCLOCK is defined
+void generate_miso_packet_clock();
+void generate_mosi_packet_clock();
+void generate_clock_byte();
+void generate_clock_multibyte(int count);
