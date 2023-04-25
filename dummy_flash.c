@@ -65,23 +65,22 @@ void start_miso_tx() {
     dma_channel_abort(mosi_dma_chan);
 
     // Attach DATA pin function to TX PIO and set direction
-    pio_gpio_init(miso_pio, DATA);                  
+    pio_gpio_init(miso_pio, DATA);
     pio_sm_set_consecutive_pindirs(miso_pio, miso_sm, DATA, 1, true);
 
     // Nuke any unshifted data from FIFO
     pio_sm_clear_fifos(miso_pio, miso_sm);
 
-    // Start PIO SM
-    pio_sm_set_enabled(miso_pio, miso_sm, true);    
- 
+    // Restart and Enable PIO SM (sets OSR shift counter to Empty)
+    uint32_t restart_mask = (1u << PIO_CTRL_SM_RESTART_LSB << miso_sm);
+    restart_mask |= (1u << PIO_CTRL_SM_ENABLE_LSB << miso_sm);
+    miso_pio->ctrl = restart_mask;
+
     // Force SM to beginning of program
     pio_sm_exec_wait_blocking(miso_pio, miso_sm, pio_encode_jmp(miso_offset)); 
 
-    // Nuke any unshifted data from OSR 
-    pio_sm_exec_wait_blocking(miso_pio, miso_sm, pio_encode_out(pio_null, 32)); 
-
     // Start DMA to fill TX FIFO
-    dma_channel_set_read_addr(miso_dma_chan, miso_packet, true);
+    dma_channel_set_read_addr(miso_dma_chan, miso_packet, true);      
 }
 
 void start_mosi_rx() {
@@ -214,18 +213,15 @@ int main() {
     gpio_init(PICO_DEFAULT_LED_PIN);
     gpio_set_dir(PICO_DEFAULT_LED_PIN, GPIO_OUT);
     gpio_init(CLK);
-#ifdef TESTCLOCK
+    #ifdef TESTCLOCK
     gpio_set_dir(CLK, GPIO_OUT);
-#else
+    #else
     gpio_set_dir(CLK, GPIO_IN);
-#endif
+    #endif
 
-    // Setup PIO State Machines
-    uint miso_offset = pio_add_program(miso_pio, &miso_program);
-    miso_program_init(miso_pio, miso_sm, miso_offset, CLK, DATA);
-
-    // uint mosi_offset = pio_add_program(mosi_pio, &mosi_program);
-    // mosi_program_init(mosi_pio, mosi_sm, mosi_offset, CLK, DATA);
+    // Setup PIO State Machine
+    miso_offset = pio_add_program(miso_pio, &dummy_flash_program);
+    dummy_flash_program_init(miso_pio, miso_sm, miso_offset, CLK, DATA);
 
     // Setup DMA
     miso_dma_chan = dma_claim_unused_channel(true);
@@ -238,7 +234,7 @@ int main() {
     gpio_set_irq_enabled_with_callback(CLK, GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL, true, &clock_edge_callback);
 
     while(true) {
-#ifdef TESTCLOCK        
+        #ifdef TESTCLOCK        
         generate_miso_packet_clock();
         sleep_ms(250);
         generate_mosi_packet_clock();
