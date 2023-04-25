@@ -14,7 +14,7 @@
 
 // Uncomment to internally generate a testing clock for use
 // while NOT connected to a camera body
-// #define TESTCLOCK true
+#define TESTCLOCK true
 
 // Define GPIOs
 #define CLK 2
@@ -32,6 +32,10 @@
 #define STATE_IDLE 0
 #define STATE_TX_MISO 1
 #define STATE_RX_MOSI 2
+
+#define mosi_packet_length 14
+uint8_t old_mosi_packet[mosi_packet_length];
+uint8_t new_mosi_packet[mosi_packet_length];
 
 const int miso_packet_length = 5;
 const uint8_t miso_packet[] = {
@@ -73,8 +77,6 @@ const uint8_t miso_packet[] = {
 // };
 
 volatile absolute_time_t risetime;
-// volatile uint8_t bytecount = 0;
-// volatile uint8_t bitcount = 0;
 volatile uint8_t state = STATE_IDLE;
 
 // DMA and PIO variables
