@@ -171,6 +171,11 @@ void mosi_dma_setup(PIO pio, uint sm, uint dma_chan) {
 }
 
 int main() {
+    // Initialize last read packet to a reasonable value
+    for (int i = 0; i < mosi_packet_length; i++) {
+        old_mosi_packet[i] = 0;
+    }
+
     // Setup Serial
     stdio_init_all();
     printf("Ready\n");
