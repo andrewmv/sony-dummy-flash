@@ -190,7 +190,7 @@ int main() {
     miso_program_init(miso_pio, miso_sm, miso_offset, CLK, DATA);
 
     mosi_offset = pio_add_program(mosi_pio, &mosi_program);
-    mosi_program_init(mosi_pio, mosi_sm, mosi_offset, CLK, DATA);
+    mosi_program_init(mosi_pio, mosi_sm, mosi_offset, DATA);
 
     // Setup DMA
     miso_dma_chan = dma_claim_unused_channel(true);

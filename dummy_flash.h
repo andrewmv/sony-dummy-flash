@@ -17,8 +17,9 @@
 #define TESTCLOCK true
 
 // Define GPIOs
-#define CLK 2
-#define DATA 3
+// Data must be a lower pin number than clock for the rx-miso PIO to map correctly
+#define DATA 2
+#define CLK 3
 #define TRIG 4
 #define F1 4
 
