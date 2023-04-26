@@ -33,7 +33,7 @@ void clock_edge_callback(uint gpio, uint32_t events) {
             pio_sm_set_enabled(miso_pio, miso_sm, false);
             pio_sm_set_enabled(mosi_pio, mosi_sm, false);
         } else if (duration_us > MOSI_INIT_US) {         // MOSI start signal detected
-            // start_mosi_rx();
+            start_mosi_rx();
         } else if (duration_us > MISO_INIT_US) {         // MISO Start signal detected
             start_miso_tx();
         } // ...else, a regular bit pulse. These are handled by the PIOs
@@ -46,12 +46,14 @@ void clock_edge_callback(uint gpio, uint32_t events) {
  * out over a serial UART >= 115200 baud
  */
 void dma_callback() {
-    if (!memcmp(old_mosi_packet, new_mosi_packet, mosi_packet_length)) {
+    // This should only ever be asserted by the MOSI DMA
+    dma_channel_acknowledge_irq0(mosi_dma_chan);
+    if (memcmp(old_mosi_packet, new_mosi_packet, mosi_packet_length) != 0) {
         memcpy(old_mosi_packet, new_mosi_packet, mosi_packet_length);
         for (int i = 0; i < mosi_packet_length; i++) {
             printf("%02X ", new_mosi_packet[i]);
         }
-        printf("New MOSI Packet\n");
+        printf("\n");
     }
 }
 
@@ -147,7 +149,7 @@ void mosi_dma_setup(PIO pio, uint sm, uint dma_chan) {
     channel_config_set_read_increment(&c, false);
     channel_config_set_write_increment(&c, true);
     channel_config_set_transfer_data_size(&c, DMA_SIZE_8);
-    channel_config_set_dreq(&c, pio_get_dreq(pio, sm, true));
+    channel_config_set_dreq(&c, pio_get_dreq(pio, sm, false));
     // Raise an IRQ at the end of the DMA transfer sequence (full packet received)
     channel_config_set_irq_quiet(&c, false);
 
