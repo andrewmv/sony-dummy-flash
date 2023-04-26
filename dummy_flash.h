@@ -6,16 +6,20 @@
  */
 
 #include <stdio.h>
+#include <string.h>
 #include "pico/stdlib.h"
 #include "hardware/pio.h"
 #include "hardware/dma.h"
 #include "hardware/gpio.h"
 
+// Uncomment to internally generate a testing clock for use
+// while NOT connected to a camera body
 #define TESTCLOCK true
 
 // Define GPIOs
-#define CLK 2
-#define DATA 3
+// Data must be a lower pin number than clock for the rx-miso PIO to map correctly
+#define DATA 2
+#define CLK 3
 #define TRIG 4
 #define F1 4
 
@@ -29,6 +33,10 @@
 #define STATE_IDLE 0
 #define STATE_TX_MISO 1
 #define STATE_RX_MOSI 2
+
+#define mosi_packet_length 14
+uint8_t old_mosi_packet[mosi_packet_length];
+uint8_t new_mosi_packet[mosi_packet_length];
 
 const int miso_packet_length = 5;
 const uint8_t miso_packet[] = {
@@ -70,8 +78,6 @@ const uint8_t miso_packet[] = {
 // };
 
 volatile absolute_time_t risetime;
-// volatile uint8_t bytecount = 0;
-// volatile uint8_t bitcount = 0;
 volatile uint8_t state = STATE_IDLE;
 
 // DMA and PIO variables
@@ -91,3 +97,9 @@ void generate_clock_byte();
 void generate_clock_multibyte(int count);
 void start_miso_tx();
 void start_mosi_rx();
+
+// Functions used for generating testing a testing clock when TESTCLOCK is defined
+void generate_miso_packet_clock();
+void generate_mosi_packet_clock();
+void generate_clock_byte();
+void generate_clock_multibyte(int count);
