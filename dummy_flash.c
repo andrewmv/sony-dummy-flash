@@ -258,5 +258,5 @@ void generate_mosi_packet_clock() {
     sleep_us(MOSI_INIT_US + 10);
     gpio_put(CLK, 0);
     sleep_us(400);
-    generate_clock_multibyte(14);
+    generate_clock_multibyte(mosi_packet_length);
 }
