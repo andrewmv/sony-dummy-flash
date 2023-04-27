@@ -14,7 +14,7 @@
 
 // Uncomment to internally generate a testing clock for use
 // while NOT connected to a camera body
-#define TESTCLOCK true
+// #define TESTCLOCK true
 
 // Define GPIOs
 // Data must be a lower pin number than clock for the rx-miso PIO to map correctly
