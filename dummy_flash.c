@@ -153,11 +153,13 @@ void mosi_dma_setup(PIO pio, uint sm, uint dma_chan) {
     // Raise an IRQ at the end of the DMA transfer sequence (full packet received)
     channel_config_set_irq_quiet(&c, false);
 
+    const volatile void *rx_fifo_addr = (io_rw_8*)&pio->rxf[sm] + 3;
+
     dma_channel_configure(
         dma_chan,           // The channel to configure
         &c,                 // Configuration struct
         NULL,               // Destination - will set later
-        &pio->rxf[sm],      // Source - PIO RX FIFO
+        rx_fifo_addr,       // Source - leftmost octet of PIO RX FIFO
         mosi_packet_length, // Transfer count (size of source array)
         false               // Don't start yet
     );

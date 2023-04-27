@@ -25,8 +25,8 @@ static inline void mosi_program_init(PIO pio, uint sm, uint offset, uint datapin
     // Map IN_BASE to the DATA pin. The next pin sequentially must be CLOCK
     sm_config_set_in_pins(&c, datapin);
 
-    // ISR Shift: shift left, autopush enabled, every 8 bits
-    sm_config_set_in_shift(&c, false, true, 8);
+    // ISR Shift: shift right, autopush enabled, every 8 bits
+    sm_config_set_in_shift(&c, true, true, 8);
 
     // Load our configuration, and jump to the start of the program
     pio_sm_init(pio, sm, offset, &c);
