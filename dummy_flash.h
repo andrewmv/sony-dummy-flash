@@ -27,12 +27,15 @@
 #define CLOCK_US 6
 #define MISO_INIT_US 80
 #define MOSI_INIT_US 150
-#define SYNC_US 260
+#define FLASH_READY_US 260
 
 // Define machine states
 #define STATE_IDLE 0
 #define STATE_TX_MISO 1
 #define STATE_RX_MOSI 2
+#define STATE_METERING_PF 3
+#define STATE_METERING_EF 4
+#define STATE_RECHARGE 5
 
 #define mosi_packet_length 14
 uint8_t old_mosi_packet[mosi_packet_length];
@@ -97,6 +100,7 @@ void generate_clock_byte();
 void generate_clock_multibyte(int count);
 void start_miso_tx();
 void start_mosi_rx();
+void assert_ready_pulse();
 
 // Functions used for generating testing a testing clock when TESTCLOCK is defined
 void generate_miso_packet_clock();

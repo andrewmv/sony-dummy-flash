@@ -16,6 +16,15 @@
 
 // Callback for edge changes on CLK
 void clock_edge_callback(uint gpio, uint32_t events) {
+    // Check if we entered this callback due to a TRIG/F1 fall,
+    // reset state if so.
+    if (gpio == TRIG) {
+        state = STATE_RECHARGE;
+        printf("FIRE\n");
+        return;
+    }
+
+    // ...otherwise we're here becaue of a CLOCK edge
     uint64_t duration_us = 0;
     if (events & GPIO_IRQ_EDGE_RISE) {
         risetime = get_absolute_time();
@@ -27,15 +36,16 @@ void clock_edge_callback(uint gpio, uint32_t events) {
         if (duration_us == 0) {
             // Ignore first falling edge if we powered on while CLK was high
             return;
-        } else if (duration_us > SYNC_US) {
-            state = STATE_IDLE;
-            // Disable RX/TX transfer state machines
-            pio_sm_set_enabled(miso_pio, miso_sm, false);
-            pio_sm_set_enabled(mosi_pio, mosi_sm, false);
+        } else if (duration_us > FLASH_READY_US) {
+            // We asserted this - no action necessary
         } else if (duration_us > MOSI_INIT_US) {         // MOSI start signal detected
             start_mosi_rx();
         } else if (duration_us > MISO_INIT_US) {         // MISO Start signal detected
-            start_miso_tx();
+            if (state == STATE_METERING_PF) {
+                printf("PF\n");
+            } else {
+                start_miso_tx();
+            }
         } // ...else, a regular bit pulse. These are handled by the PIOs
     }
 }
@@ -54,7 +64,34 @@ void dma_callback() {
             printf("%02X ", new_mosi_packet[i]);
         }
         printf("\n");
+        // Check to see what kind of packet the body just sent
+        if (new_mosi_packet[5] == 0x7d) {
+            // This is part of a flash metering transaction
+            if (new_mosi_packet[7] == 0xc0) {
+                // This is the final flash exposure metering data
+                state = STATE_METERING_EF;
+                // Tell the body we're ready to fire the exposure flash
+                assert_ready_pulse();
+            } else {
+                // This is pre-flash metering data
+                state = STATE_METERING_PF;
+                // Tell the body we're ready to fire the pre-flash
+                assert_ready_pulse();
+            }
+        } else {
+            // This is a boring old body state packet
+            state = STATE_IDLE;
+        }
     }
+}
+
+// Reverse CLK direction and assert a 270us "Ready" signal
+void assert_ready_pulse() {
+    gpio_set_dir(CLK, GPIO_OUT);
+    gpio_put(CLK, 1);
+    sleep_us(FLASH_READY_US);
+    gpio_put(CLK, 0);
+    gpio_set_dir(CLK, GPIO_IN);
 }
 
 // Configure the PIOs and DMA for a flash-to-body transfer
@@ -191,6 +228,9 @@ int main() {
     #else
         gpio_set_dir(CLK, GPIO_IN);
     #endif
+    gpio_init(TRIG);
+    gpio_set_dir(TRIG, GPIO_IN);
+    gpio_pull_up(TRIG);
 
     // Setup PIO State Machine
     miso_offset = pio_add_program(miso_pio, &miso_program);
@@ -208,6 +248,7 @@ int main() {
 
     // Setup IRQ callbacks
     gpio_set_irq_enabled_with_callback(CLK, GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL, true, &clock_edge_callback);
+    gpio_set_irq_enabled(TRIG, GPIO_IRQ_EDGE_FALL, true);
 
     while(true) {
         #ifdef TESTCLOCK        
