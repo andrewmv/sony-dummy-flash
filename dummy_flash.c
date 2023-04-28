@@ -89,7 +89,8 @@ void dma_callback() {
 void assert_ready_pulse() {
     gpio_set_dir(CLK, GPIO_OUT);
     gpio_put(CLK, 1);
-    sleep_us(FLASH_READY_US);
+    // We'll be inside an ISR, so sleep_us will panic
+    busy_wait_us(FLASH_READY_US);
     gpio_put(CLK, 0);
     gpio_set_dir(CLK, GPIO_IN);
 }
