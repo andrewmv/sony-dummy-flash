@@ -218,7 +218,7 @@ int main() {
 
     // Setup Serial
     stdio_init_all();
-    printf("Ready\n");
+    printf("Flash Emulator Ready\n");
 
     // Setup GPIO
     gpio_init(PICO_DEFAULT_LED_PIN);
